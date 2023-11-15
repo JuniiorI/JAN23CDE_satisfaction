@@ -15,13 +15,17 @@ index_name = "reviews"
 # Mapping pour l'index
 mapping = {
     "mappings": {
+        "_meta": {
+            "created_by": "yaya"
+        },
         "properties": {
             "@timestamp": {"type": "date"},
             "Company": {"type": "keyword"},
             "Customer": {"type": "keyword"},
-            "Date_experience": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
-            "Date_reply": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
-            "Date_review": {"type": "date", "format": "yyyy-MM-dd HH:mm:ss"},
+            "Date_experience": {"type": "date", "format": "yyyy-MM-dd"},
+            "Date_reply": {"type": "date", "format": "yyyy-MM-dd"},
+            "Date_review": {"type": "date", "format": "yyyy-MM-dd"},
+            "Response_time":{"type": "long"},
             "Experience": {"type": "keyword"},
             "Language": {"type": "keyword"},
             "Number_review": {"type": "long"},
@@ -389,6 +393,36 @@ def create_elasticsearch_index():
         percentage = (number_of_no_reply / total_no_reply) * 100
         print(f"Entreprise : {company['key']} - Nombre de No Reply : {number_of_no_reply} - Taux de No Reply : {percentage:.2f}%")
         
+    # Exécution de la requête pour obtenir le classement des entreprises selon leur note moyenne
+    query = {
+        "aggs": {
+            "companies": {
+                "terms": {
+                    "field": "Company"
+                },
+                "aggs": {
+                    "average_day": {
+                        "avg": {
+                            "field": "Response_time"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    result = es.search(index=index_name, body=query)
+
+    # Récupération des résultats
+    companies = result["aggregations"]["companies"]["buckets"]
+
+    # Tri des entreprises par leur note moyenne
+    companies.sort(key=lambda company: company["average_day"]["value"], reverse=False)
+
+    # Affichage des résultats
+    for company in companies:
+        average_days = round(company['average_day']['value'], 2)
+        print(f"Entreprise : {company['key']} - Délai de réponse moyen : {average_days}")
 
 if __name__ == "__main__":
     create_elasticsearch_index()
