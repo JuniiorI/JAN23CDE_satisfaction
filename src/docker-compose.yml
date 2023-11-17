@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.2
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.7.1
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  notebook-scraping:
+    build:
+      context: .
+      dockerfile: Dockerfile-scraping
+    volumes:
+      - C:\Users\yaya-\Documents\Github\JAN23CDE_satisfaction\src:/app
+    depends_on:
+      - elasticsearch
+      - kibana
+
+  cronjob:
+    build:
+      context: .
+      dockerfile: Dockerfile-cronjob
+    volumes:
+      - C:\Users\yaya-\Documents\Github\JAN23CDE_satisfaction\src:/app
+    depends_on:
+      - notebook-scraping
