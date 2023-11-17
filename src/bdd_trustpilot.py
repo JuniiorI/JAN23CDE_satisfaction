@@ -2,10 +2,6 @@ from elasticsearch import Elasticsearch, helpers
 import csv
 import time
 
-from elasticsearch import Elasticsearch, helpers
-import csv
-import time
-
 # Connexion au cluster Elasticsearch
 es = Elasticsearch(hosts="http://localhost:9200")
 
@@ -34,20 +30,23 @@ mapping = {
             "Status": {"type": "keyword"},
             "Title": {"type": "keyword"},
             "column1": {"type": "long"},
-            "document_id": {"type": "keyword"}  # Ajout d'un champ pour l'ID du document
+            "document_id": {"type": "keyword"}
         }
     }
 }
 
 
 def create_elasticsearch_index():
+    es = Elasticsearch(hosts="http://localhost:9200")
 
+    # Index des avis clients
+    index_name = "reviews"
     # Créer l'index avec le mapping (you can skip this if the index already exists)
     if not es.indices.exists(index=index_name):
         es.indices.create(index=index_name, body=mapping)
 
     # Lecture du fichier CSV et correction des champs vides
-    with open("../data/processed/avis_clients.csv", encoding="utf-8") as f:
+    with open("../data/processed/reviews.csv", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         documents = []
         for idx, row in enumerate(reader):
@@ -75,10 +74,6 @@ def create_elasticsearch_index():
     for hit in result["hits"]["hits"]:
         print(hit["_source"])
 
-
-
-
-
     # Insérer les documents en vrac dans Elasticsearch
     if documents:
         try:
@@ -96,10 +91,16 @@ def create_elasticsearch_index():
     for hit in result["hits"]["hits"]:
         print(hit["_source"])
 
-    response = es.search(index="bdd_review")
+    response = es.search(index="reviews")
     # Récupération du template
     template = es.indices.get_mapping()
+
     # recherche de tous les documents
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
+    
     query = {
         "query": {
             "match_all": {}
@@ -107,7 +108,7 @@ def create_elasticsearch_index():
     }
 
     # Exécuter la requête
-    result = es.search(index="bdd_review", body=query)
+    result = es.search(index="reviews", body=query)
 
     # Afficher les résultats
     for hit in result["hits"]["hits"]:
@@ -115,6 +116,10 @@ def create_elasticsearch_index():
 
 
     # Requête pour obtenir les 5 mots clés positifs
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
     query = {
         "query": {
             "match_all": {}
@@ -141,10 +146,6 @@ def create_elasticsearch_index():
             }
         }
     }
-
-    # Exécution de la requête
-
-
     # Exécution de la requête
     result = es.search(index=index_name, body = query)
 
@@ -154,6 +155,11 @@ def create_elasticsearch_index():
     for positive_word in positive_words:
         print(f"Mot clé positif : {positive_word['key']} - Nombre d'occurrences : {positive_word['doc_count']}")
 
+    # Recherche des mots les plus récurrents dans les commentaires négatifs
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
     query = {
         "query": {
             "match_all": {}
@@ -162,8 +168,8 @@ def create_elasticsearch_index():
             "negative_words": {
                 "terms": {
                     "field": "Title",
-                    "size": 10,
-                    "min_doc_count": 5
+                    "size": 3,
+                    "min_doc_count": 10
                 },
                 "aggs": {
                     "rating_filter": {
@@ -197,7 +203,12 @@ def create_elasticsearch_index():
     for negative_word in negative_words_sorted:
         print(f"Mot clé négatif : {negative_word['key']} - Nombre d'occurrences : {negative_word['doc_count']}")
 
+
     # Requête d'agrégation pour obtenir des statistiques sur le champ "Rating"
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
     query = {
         "size": 0,
         "aggs": {
@@ -220,7 +231,7 @@ def create_elasticsearch_index():
     }
 
     # Exécuter la requête
-    result = es.search(index="bdd_review", body=query)
+    result = es.search(index="reviews", body=query)
 
     # Afficher les résultats de l'agrégation
     aggregations = result.get("aggregations", {})
@@ -237,6 +248,10 @@ def create_elasticsearch_index():
     print("    Écart-type:", extended_ratings_stats.get("std_deviation", 0))
         
     # Liste des entreprises avec le plus de commentaires négatifs
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
     query = {
         "query": {
             "match_all": {}
@@ -273,8 +288,6 @@ def create_elasticsearch_index():
         print(f"Entreprise : {company}, Nombre de commentaires négatifs : {count}")
 
     # Le nombre de commentaires non répondues par les entreprises
-
-
     # Exécution de la requête
     result = es.search(index=index_name, 
     body={
@@ -303,6 +316,10 @@ def create_elasticsearch_index():
         print(f"Entreprise : {company['key']} - Nombre de No Reply : {company['doc_count']}")
 
     # Exécution de la requête pour obtenir le classement des entreprises selon leur note moyenne
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
     query = {
         "aggs": {
             "companies": {
@@ -334,6 +351,10 @@ def create_elasticsearch_index():
         print(f"Entreprise : {company['key']} - Note moyenne : {average_ratings}")
 
     # Exécution de la requête pour obtenir les différents statuts des commentateurs
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
     query = {
         "aggs": {
             "statuses": {
@@ -353,8 +374,46 @@ def create_elasticsearch_index():
     for status in statuses:
         print(f"Status : {status['key']} - Nombre de commentateurs : {status['doc_count']}")
 
+    # Exécution de la requête pour obtenir le délai de réponse des entreprises sur les avis ayant obtenu une réponse.
+    es = Elasticsearch(hosts="http://localhost:9200")
 
-    # Exécution de la requête
+    # Index des avis clients
+    index_name = "reviews"
+    query = {
+        "aggs": {
+            "companies": {
+                "terms": {
+                    "field": "Company"
+                },
+                "aggs": {
+                    "average_day": {
+                        "avg": {
+                            "field": "Response_time"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    result = es.search(index=index_name, body=query)
+
+    # Récupération des résultats
+    companies = result["aggregations"]["companies"]["buckets"]
+
+    # Tri des entreprises par leur note moyenne
+    companies.sort(key=lambda company: company["average_day"]["value"], reverse=False)
+
+    # Affichage des résultats
+    for company in companies:
+        average_days = round(company['average_day']['value'], 2)
+        print(f"Entreprise : {company['key']} - Délai de réponse moyen : {average_days}")
+    
+    # Nombre et Pourcentage de commentaires non répondus par entreprise
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
     query = {
         "query": {
             "match": {
@@ -392,37 +451,6 @@ def create_elasticsearch_index():
         number_of_no_reply = company["number_of_no_reply"]["value"]
         percentage = (number_of_no_reply / total_no_reply) * 100
         print(f"Entreprise : {company['key']} - Nombre de No Reply : {number_of_no_reply} - Taux de No Reply : {percentage:.2f}%")
-        
-    # Exécution de la requête pour obtenir le classement des entreprises selon leur note moyenne
-    query = {
-        "aggs": {
-            "companies": {
-                "terms": {
-                    "field": "Company"
-                },
-                "aggs": {
-                    "average_day": {
-                        "avg": {
-                            "field": "Response_time"
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    result = es.search(index=index_name, body=query)
-
-    # Récupération des résultats
-    companies = result["aggregations"]["companies"]["buckets"]
-
-    # Tri des entreprises par leur note moyenne
-    companies.sort(key=lambda company: company["average_day"]["value"], reverse=False)
-
-    # Affichage des résultats
-    for company in companies:
-        average_days = round(company['average_day']['value'], 2)
-        print(f"Entreprise : {company['key']} - Délai de réponse moyen : {average_days}")
 
 if __name__ == "__main__":
     create_elasticsearch_index()
