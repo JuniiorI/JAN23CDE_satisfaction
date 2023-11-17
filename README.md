@@ -20,5 +20,9 @@ Nous ferons une analyse brève de la base de données.
 
 Le 1er Notebook a été transformé en une fonction "extract_reviews()" qui parviendra à scraper rapidement sans retaper tout le code pour chaque compagnie.
 
-
+Finalisation de la stratégie de stockage (stockage des fichiers brutes)
+Pour les fichiers brutes
+et les données transformées
+Choisir la techno de BDD
+Test de création, insertion de données et requêtage depuis un notebook) --> identifier les lignes importantes
 

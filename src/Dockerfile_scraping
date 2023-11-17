@@ -1,0 +1,14 @@
+# Dockerfile_scraping
+FROM python:3.8
+
+WORKDIR /app
+
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . /app/
+
+# Convertir le notebook en script Python
+RUN jupyter nbconvert --to script notebook_scraping_trustpilot.ipynb
+
+CMD ["jupyter", "nbconvert", "--to", "script", "notebook_scraping_trustpilot.ipynb", "&&", "python", "notebook_scraping_trustpilot.py"]

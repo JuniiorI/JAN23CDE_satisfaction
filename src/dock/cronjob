@@ -1,0 +1,2 @@
+# Run the scraping script every Sunday at midnight
+0 0 * * 0 root /usr/local/bin/python3 /app/notebook_scraping.py >> /var/log/cron.log 2>&1

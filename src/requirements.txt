@@ -1,0 +1,7 @@
+# Ajoutez les bibliothèques Python nécessaires
+requests
+beautifulsoup4
+pandas
+dateparser
+jupyter
+nbconvert
