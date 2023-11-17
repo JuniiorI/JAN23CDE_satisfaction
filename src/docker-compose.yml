@@ -2,36 +2,34 @@ version: '3'
 
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.2
-    environment:
-      - discovery.type=single-node
+    build:
+      context: .
+      dockerfile: Dockerfile_elasticsearch
     ports:
       - "9200:9200"
+    networks:
+      - elastic
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.7.1
-    environment:
-      ELASTICSEARCH_URL: http://elasticsearch:9200
+    build:
+      context: .
+      dockerfile: Dockerfile_kibana
     ports:
       - "5601:5601"
+    networks:
+      - elastic
     depends_on:
       - elasticsearch
 
-  notebook-scraping:
+  scraping:
     build:
       context: .
-      dockerfile: Dockerfile-scraping
+      dockerfile: Dockerfile_scraping
     volumes:
-      - C:\Users\yaya-\Documents\Github\JAN23CDE_satisfaction\src:/app
-    depends_on:
-      - elasticsearch
-      - kibana
+      - ./data:/app/data
+    networks:
+      - elastic
 
-  cronjob:
-    build:
-      context: .
-      dockerfile: Dockerfile-cronjob
-    volumes:
-      - C:\Users\yaya-\Documents\Github\JAN23CDE_satisfaction\src:/app
-    depends_on:
-      - notebook-scraping
+networks:
+  elastic:
+    driver: bridge

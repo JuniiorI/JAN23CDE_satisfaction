@@ -15,7 +15,6 @@ mapping = {
             "created_by": "yaya"
         },
         "properties": {
-            "@timestamp": {"type": "date"},
             "Company": {"type": "keyword"},
             "Customer": {"type": "keyword"},
             "Date_experience": {"type": "date", "format": "yyyy-MM-dd"},
@@ -29,7 +28,6 @@ mapping = {
             "Reply": {"type": "keyword"},
             "Status": {"type": "keyword"},
             "Title": {"type": "keyword"},
-            "column1": {"type": "long"},
             "document_id": {"type": "keyword"}
         }
     }
