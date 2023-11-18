@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import dateparser
+import re
 
 def extract_reviews(url):
     response = requests.get(url)
@@ -53,69 +54,90 @@ def concat_extracted_companies(younited_url, cofidis_url, orange_url, floa_url, 
 
     df_all = pd.concat([df_younited, df_cofidis, df_orange, df_floa, df_bourso, df_anytime], axis=0)
 
-    if 'Number_review' in df_all.columns:
-        df_all[["Number_review", "review"]] = df_all["Number_review"].str.split(" ", n=1, expand=True)
-        df_all[["ExperienceDate", "Date_experience"]] = df_all["Experience Date"].str.split(":", n=1, expand=True)
-        df_all[["Experience", "Date"]] = df_all["Experience Date"].str.split("Date", n=1, expand=True)
-
     # Print the structure of df_all after concatenation
     df_all = df_all.reset_index(drop=True)
 
     return df_all
 
 def split_projection(df_all):
+    print(df_all.columns)  # Print the columns to the console for debugging
     df_all[["Number_review", "review"]] = df_all["Number_review"].str.split(" ", n=1, expand=True)
     df_all[["ExperienceDate", "Date_experience"]] = df_all["Experience Date"].str.split(":", n=1, expand=True)
     df_all[["Experience", "Date"]] = df_all["Experience Date"].str.split("Date", n=1, expand=True)
 
     new_df = df_all[["Company", "Customer", "Number_review", "Language", "Title", "Date_review", "Reply", "Date_reply", "Rating", "Status", "Experience", "Date_experience"]]
     return new_df
+
+def convert_date(date_str):
+    try:
+        return dateparser.parse(date_str).strftime('%Y-%m-%d')
+    except:
+        # Handle different date formats here
+        formats_to_try = ['%Y-%m-%d', 'Updated %b %d, %Y']
+        for format_str in formats_to_try:
+            try:
+                if 'Updated' in date_str:
+                    # Handle the "Updated" format separately
+                    return dateparser.parse(date_str, date_formats=[format_str]).strftime('%Y-%m-%d')
+                else:
+                    return dateparser.parse(date_str, date_formats=[format_str]).strftime('%Y-%m-%d')
+            except:
+                pass
+        # If all formats fail, return the original string
+    
+        return date_str
+
+    
 def conversion_type(new_df):
-    # Check if the columns exist before attempting to perform operations on them
-    columns_to_convert = ["Number_review", "Rating", "Date_review", "Date_experience", "Date_reply"]
-    existing_columns = set(new_df.columns)
+    # Create a regular expression to match the date format
+    date_regex = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
-    columns_to_convert = [col for col in columns_to_convert if col in existing_columns]
+    # Identify the invalid dates
+    invalid_dates = []
+    for date in new_df['Date_review']:
+        if not date_regex.match(date):
+            invalid_dates.append(date)
 
-    # Convert the existing columns to the appropriate data types
-    if "Number_review" in columns_to_convert:
-        new_df["Number_review"] = pd.to_numeric(new_df["Number_review"], errors="coerce")
+    # Print the number of invalid dates
+    print(len(invalid_dates))
 
-    if "Rating" in columns_to_convert:
-        new_df["Rating"] = pd.to_numeric(new_df["Rating"], errors="coerce")
+    min_date = min(new_df['Date_review'])
 
-    if "Date_review" in columns_to_convert:
-        new_df["Date_review"] = pd.to_datetime(new_df["Date_review"], errors="coerce").dt.strftime('%Y-%m-%d')
+    new_df["Date_review"] = new_df["Date_review"].apply(convert_date)
+    new_df["Date_reply"] = new_df["Date_reply"].apply(convert_date)
+    new_df["Date_experience"] = new_df["Date_experience"].apply(convert_date)
 
-    if "Date_experience" in columns_to_convert:
-        new_df["Date_experience"] = pd.to_datetime(new_df["Date_experience"], errors="coerce").dt.strftime('%Y-%m-%d')
+    #Convertir la colonne "Date_reply" en dates
+    new_df["Date_reply"] = new_df["Date_reply"].apply(lambda x: dateparser.parse(x) if isinstance(x, str) else x)
+    #Remplacer les valeurs manquantes de "Date_reply" par les valeurs de "Date_review"
+    new_df["Date_reply"] = new_df.apply(lambda row: row["Date_review"] if pd.isna(row["Date_reply"]) else row["Date_reply"], axis=1)
+    #Convertir la colonne "Date_reply" en dates
+    new_df["Date_experience"] = new_df["Date_experience"].apply(lambda x: dateparser.parse(x) if isinstance(x, str) else x)
+    #Remplacer les valeurs manquantes de "Date_reply" par les valeurs de "Date_review"
+    new_df["Date_experience"] = new_df.apply(lambda row: row["Date_experience"] if pd.isna(row["Date_experience"]) else row["Date_experience"], axis=1)
+    #Convertir la colonne "Date_reply" en dates
+    new_df["Date_review"] = new_df["Date_review"].apply(lambda x: dateparser.parse(x) if isinstance(x, str) else x)
+    #Remplacer les valeurs manquantes de "Date_reply" par les valeurs de "Date_review"
+    new_df["Date_review"] = new_df.apply(lambda row: row["Date_review"] if pd.isna(row["Date_review"]) else row["Date_review"], axis=1)
 
-    if "Date_reply" in columns_to_convert:
-        new_df["Date_reply"] = pd.to_datetime(new_df["Date_reply"], errors="coerce").dt.strftime('%Y-%m-%d')
+ 
 
+    new_df[["Number_review", "Rating"]] = new_df[["Number_review", "Rating"]].astype("int64")
     return new_df
 
 def cleaning_df(new_df):
     # Check if 'Status' column exists
-    if 'Status' in new_df.columns:
-        new_df["Status"] = new_df["Status"].fillna(method="bfill")
-
+    new_df["Status"] = new_df["Status"].fillna(method="bfill")
     new_df["Reply"] = new_df["Reply"].fillna("No Reply")
     new_df["Date_reply"] = new_df["Date_reply"].fillna(new_df["Date_review"])
     new_df["Date_reply"] = new_df.apply(lambda row: row["Date_review"] if pd.isna(row["Date_reply"]) else row["Date_reply"], axis=1)
 
-    columns_to_convert = ['Date_review', 'Date_experience', 'Date_reply']
-
-    for col in columns_to_convert:
-        new_df[col] = pd.to_datetime(new_df[col]).dt.strftime('%Y-%m-%d')
-
     return new_df
 
 def create_response_time(new_df):
-    # Convert 'Date_reply' and 'Date_review' to datetime
-    new_df['Date_reply'] = pd.to_datetime(new_df['Date_reply'], format='%Y-%m-%d')
-    new_df['Date_review'] = pd.to_datetime(new_df['Date_review'], format='%Y-%m-%d')
-
+    columns_to_convert = ['Date_review', 'Date_experience', 'Date_reply']
+    for col in columns_to_convert:
+        new_df[col] = pd.to_datetime(new_df[col], format = '%Y-%m-%d')
     # Calculate 'Response_time' as the difference between 'Date_reply' and 'Date_review'
     new_df["Response_time"] = new_df["Date_reply"] - new_df["Date_review"]
 
@@ -125,6 +147,7 @@ def create_response_time(new_df):
     # Replace NaN values with 0
     new_df["Response_time"].fillna(0, inplace=True)
     new_df = new_df[["Company", "Customer", "Number_review", "Language", "Title", "Date_review", "Reply", "Date_reply", "Rating", "Status", "Experience", "Date_experience", "Response_time"]]
+    new_df = new_df.dropna(subset=["Date_experience"])
 
     return new_df
 
@@ -158,17 +181,17 @@ bourso_url = "https://www.trustpilot.com/review/boursorama-banque.com"
 anytime_url = "https://www.trustpilot.com/review/anyti.me"
 
 df_all = concat_extracted_companies(younited_url, cofidis_url, orange_url, floa_url, bourso_url, anytime_url)
-#df_splited = split_projection(df_all)
-df_converted = conversion_type(df_all.copy())
-df_cleaned = cleaning_df(df_converted.copy())
-new_df = create_response_time(df_cleaned.copy())
+df_splited = split_projection(df_all)
+df_converted = conversion_type(df_splited)
+df_cleaned = cleaning_df(df_converted)
 df_anytime = extract_reviews(anytime_url)
 df_bourso = extract_reviews(bourso_url)
 df_orange = extract_reviews(orange_url)
 df_floa = extract_reviews(floa_url)
 df_cofidis = extract_reviews(cofidis_url)
 df_younited = extract_reviews(younited_url)
+new_df = create_response_time(df_cleaned)
+
 # Pass the extracted dataframes to main_dataframe
 main_dataframe(df_cleaned, df_anytime, df_bourso, df_orange, df_floa, df_cofidis, df_younited)
 print(new_df)
-

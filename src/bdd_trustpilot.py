@@ -408,10 +408,6 @@ def create_elasticsearch_index():
         print(f"Entreprise : {company['key']} - Délai de réponse moyen : {average_days}")
     
     # Nombre et Pourcentage de commentaires non répondus par entreprise
-    es = Elasticsearch(hosts="http://localhost:9200")
-
-    # Index des avis clients
-    index_name = "reviews"
     query = {
         "query": {
             "match": {
