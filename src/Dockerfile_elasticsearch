@@ -1,2 +1,5 @@
 # Use the official Elasticsearch image
-FROM docker.elastic.co/elasticsearch/elasticsearch:8.8.2
+FROM docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+
+# Add your custom Elasticsearch configuration files
+ADD config/elasticsearch.yml /usr/share/elasticsearch/config/elasticsearch.yml
