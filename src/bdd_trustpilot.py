@@ -72,15 +72,6 @@ def create_elasticsearch_index():
     for hit in result["hits"]["hits"]:
         print(hit["_source"])
 
-    # Insérer les documents en vrac dans Elasticsearch
-    if documents:
-        try:
-            response = helpers.bulk(es, documents, index=index_name)
-            print("Documents insérés avec succès :", response)
-        except helpers.BulkIndexError as e:
-            print("Erreur lors de l'insertion des documents :")
-            for err in e.errors:
-                print("Erreur :", err)
 
     # Vérification des documents insérés
     result = es.search(index=index_name, size=5)  # Récupère les 5 premiers documents
@@ -372,7 +363,8 @@ def create_elasticsearch_index():
     for status in statuses:
         print(f"Status : {status['key']} - Nombre de commentateurs : {status['doc_count']}")
 
-    # Exécution de la requête pour obtenir le délai de réponse des entreprises sur les avis ayant obtenu une réponse.
+    
+    # Exécution de la requête pour obtenir le nombre de types de statut des commentateurs par entreprise
     es = Elasticsearch(hosts="http://localhost:9200")
 
     # Index des avis clients
@@ -381,12 +373,13 @@ def create_elasticsearch_index():
         "aggs": {
             "companies": {
                 "terms": {
-                    "field": "Company"
+                    "field": "Company",
+                    "size": 10  # Adjust the size based on your needs
                 },
                 "aggs": {
-                    "average_day": {
-                        "avg": {
-                            "field": "Response_time"
+                    "statuses": {
+                        "terms": {
+                            "field": "Status"
                         }
                     }
                 }
@@ -399,13 +392,17 @@ def create_elasticsearch_index():
     # Récupération des résultats
     companies = result["aggregations"]["companies"]["buckets"]
 
-    # Tri des entreprises par leur note moyenne
-    companies.sort(key=lambda company: company["average_day"]["value"], reverse=False)
-
     # Affichage des résultats
     for company in companies:
-        average_days = round(company['average_day']['value'], 2)
-        print(f"Entreprise : {company['key']} - Délai de réponse moyen : {average_days}")
+        company_name = company['key']
+        statuses = company["statuses"]["buckets"]
+        
+        print(f"Entreprise : {company_name}")
+        for status in statuses:
+            status_name = status['key']
+            count = status['doc_count']
+            print(f"    Status : {status_name} - Nombre de commentateurs : {count}")
+
     
     # Nombre et Pourcentage de commentaires non répondus par entreprise
     query = {
@@ -445,6 +442,42 @@ def create_elasticsearch_index():
         number_of_no_reply = company["number_of_no_reply"]["value"]
         percentage = (number_of_no_reply / total_no_reply) * 100
         print(f"Entreprise : {company['key']} - Nombre de No Reply : {number_of_no_reply} - Taux de No Reply : {percentage:.2f}%")
+
+    # Exécution de la requête pour obtenir le délai de réponse des entreprises sur les avis ayant obtenu une réponse.
+    es = Elasticsearch(hosts="http://localhost:9200")
+
+    # Index des avis clients
+    index_name = "reviews"
+    query = {
+        "aggs": {
+            "companies": {
+                "terms": {
+                    "field": "Company"
+                },
+                "aggs": {
+                    "average_day": {
+                        "avg": {
+                            "field": "Response_time"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    result = es.search(index=index_name, body=query)
+
+    # Récupération des résultats
+    companies = result["aggregations"]["companies"]["buckets"]
+
+    # Tri des entreprises par leur note moyenne
+    companies.sort(key=lambda company: company["average_day"]["value"], reverse=False)
+
+    # Affichage des résultats
+    for company in companies:
+        average_days = round(company['average_day']['value'], 2)
+        print(f"Entreprise : {company['key']} - Délai de réponse moyen : {average_days}")
+    
 
 if __name__ == "__main__":
     create_elasticsearch_index()
