@@ -83,7 +83,7 @@ def load_existing_dataframe(file_path):
 def save_dataframe(df, file_path):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     df.to_csv(file_path, index=False)
-    
+
 def concat_extracted_companies(company_urls, previous_dfs=None):
     dfs = {}
 
@@ -148,13 +148,14 @@ def conversion_type(new_df):
 
     # Vérifier la présence des colonnes avant de les utiliser
     if 'Date_review' in new_df.columns:
-        new_df["Date_review"] = new_df["Date_review"].apply(convert_date)
-
+        new_df["Date_review"] = new_df["Date_review"].apply(lambda x: convert_date(x) if pd.notna(x) else x)
+        #new_df["Date_review"] = new_df["Date_review"].apply(convert_date)
     if 'Date_reply' in new_df.columns:
-        new_df["Date_reply"] = new_df["Date_reply"].apply(convert_date)
-
+        new_df["Date_reply"] = new_df["Date_reply"].apply(lambda x: convert_date(x) if pd.notna(x) else x)
+        #new_df["Date_reply"] = new_df["Date_reply"].apply(convert_date)
     if 'Date_experience' in new_df.columns:
         new_df["Date_experience"] = new_df["Date_experience"].apply(convert_date)
+        new_df["Date_experience"] = new_df["Date_experience"].apply(lambda x: convert_date(x) if pd.notna(x) else x)
 
     # Convertir la colonne "Date_reply" en dates
     new_df["Date_reply"] = new_df["Date_reply"].apply(lambda x: dateparser.parse(x) if isinstance(x, str) else x)
@@ -169,7 +170,7 @@ def conversion_type(new_df):
     # Remplacer les valeurs manquantes de "Date_reply" par les valeurs de "Date_review"
     new_df["Date_review"] = new_df.apply(lambda row: row["Date_review"] if pd.isna(row["Date_review"]) else row["Date_review"], axis=1)
 
-    new_df[["Number_review", "Rating"]] = new_df[["Number_review", "Rating"]].astype("int64")
+    new_df[["Number_review", "Rating"]] = new_df[["Number_review", "Rating"]].astype({"Number_review": "int64", "Rating": "int64"})
     return new_df
 
 def cleaning_df(new_df):
@@ -292,10 +293,20 @@ df_younited = load_existing_dataframe(younited_file_path, df_younited)
 # Exécution du code
 df_all = concat_extracted_companies(company_urls)
 df_splited = split_projection(df_all)
-df_splited["Date_review"] = df_splited["Date_review"].apply(convert_date)
+df_splited["Date_review"] = df_splited["Date_review"].apply(lambda x: convert_date(x) if pd.notna(x) else x)
+#df_splited["Date_review"] = df_splited["Date_review"].apply(convert_date)
 df_converted = conversion_type(df_splited)
 df_cleaned = cleaning_df(df_converted)
 new_df = create_response_time(df_cleaned)
+
+# Assurez-vous que le répertoire de destination existe
+output_dir = "../data/processed"
+os.makedirs(output_dir, exist_ok=True)
+
+# Sauvegardez le DataFrame combiné au format JSON
+new_df.to_json(os.path.join(output_dir, "reviews.json"), orient='records')
+new_df.to_csv("../data/processed/reviews.csv", index=False)
+
 
 df_anytime = extract_reviews(anytime_url)
 df_bourso = extract_reviews(bourso_url)
