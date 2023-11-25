@@ -35,10 +35,6 @@ mapping = {
 
 
 def create_elasticsearch_index():
-    es = Elasticsearch(hosts="http://localhost:9200")
-
-    # Index des avis clients
-    index_name = "reviews"
     # Créer l'index avec le mapping (you can skip this if the index already exists)
     if not es.indices.exists(index=index_name):
         es.indices.create(index=index_name, body=mapping)
