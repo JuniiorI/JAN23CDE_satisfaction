@@ -1,0 +1,45 @@
+Soutenance : Projet de Scraping et Visualisation de Données
+Problématique Business :
+
+    Contexte : Le besoin initial était de collecter et analyser les avis Trustpilot pour en extraire des insights utiles pour le business.
+    Défi : Les avis Trustpilot sont vastes et variés, nécessitant une approche automatisée pour collecter, traiter et visualiser ces données.
+
+Proposition de Valeur :
+
+    Objectif : Fournir une plateforme de visualisation interactive des avis Trustpilot, permettant une compréhension approfondie des retours clients.
+    Avantages : Gain d'efficacité dans la collecte des données, analyse en temps réel, identification rapide des tendances et des problèmes, amélioration continue basée sur les retours clients.
+
+Approche Méthodique (Plan) :
+
+    Sources de Données et Audit des Données :
+        Audit de la qualité des données Trustpilot.
+        Évaluation de la volumétrie des avis disponibles.
+
+    Liste des Principaux Requis Fonctionnels :
+        Collecte automatisée des avis Trustpilot.
+        Stockage des données dans Elasticsearch.
+        Utilisation de Kibana pour la visualisation et l'analyse.
+
+    Choix et Justification des Technologies :
+        Elasticsearch pour le stockage scalable des données.
+        Kibana pour la visualisation interactive.
+        Docker et Docker Compose pour la gestion des conteneurs.
+
+    Schéma d'Architecture Globale :
+        Utilisation de conteneurs Docker pour l'isolation des composants (Elasticsearch, Kibana, Scraping).
+        Intégration du scraping des avis Trustpilot avec un script Python.
+
+    Démo :
+        Lancement du projet à l'aide de Docker Compose.
+        Exploration du dashboard interactif dans Kibana.
+        Présentation du code source sur GitHub.
+
+    Conclusion et Perspectives :
+        Récapitulation des avantages clés.
+        Possibilités d'extension : ajout de nouvelles sources, améliorations du scraping, optimisations de la visualisation.
+        Ouverture à des analyses avancées, comme la détection de sentiment.
+
+Liens Utiles :
+
+    GitHub Repository : Accès au code source et à la documentation.
+    Démo en Ligne : Visualisation interactive des avis Trustpilot.

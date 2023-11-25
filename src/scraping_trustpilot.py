@@ -6,6 +6,12 @@ import re
 import os
 import time
 
+
+# Constantes pour les chemins de fichiers
+DATA_DIR = "../data"
+RAW_DIR = os.path.join(DATA_DIR, "raw")
+PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
+
 def extract_reviews(url):
     headers = {
         'Cache-Control': 'no-cache',
@@ -58,21 +64,36 @@ def extract_reviews(url):
     df = pd.DataFrame(data)
     return df
 
-# Fonction pour concaténer les avis de différentes entreprises et les ré-extraire
+
+def load_existing_dataframe(file_path):
+    headers = {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'User-Agent': 'Your User Agent String'
+    }
+
+    if os.path.isfile(file_path):
+        df = pd.read_csv(file_path)
+        print(f"Loaded DataFrame from {file_path}")
+        return df
+    else:
+        print(f"No existing DataFrame found at {file_path}")
+        return pd.DataFrame()
+
+def save_dataframe(df, file_path):
+    df.to_csv(file_path, index=False)
+
 def concat_extracted_companies(company_urls, previous_dfs=None):
     dfs = {}
 
     for company, (url, file_path) in company_urls.items():
         if os.path.isfile(file_path):
-            dfs[company] = pd.read_csv(file_path)
+            dfs[company] = load_existing_dataframe(file_path)
         else:
             dfs[company] = extract_reviews(url)
-            dfs[company].to_csv(file_path, index=False)
+            save_dataframe(dfs[company], file_path)
 
-    df_all = pd.concat(list(dfs.values()), axis=0)
-
-    # Print the structure of df_all after concatenation
-    df_all = df_all.reset_index(drop=True)
+    df_all = pd.concat(list(dfs.values()), axis=0).reset_index(drop=True)
 
     if df_all.empty and previous_dfs is not None:
         print("Le DataFrame est vide. Utilisation des données précédentes.")
@@ -165,9 +186,8 @@ def create_response_time(new_df):
         new_df[col] = pd.to_datetime(new_df[col], format='%Y-%m-%d')
 
     # Calculate 'Response_time' as the difference between 'Date_reply' and 'Date_review'
-    #min_date = min(new_df['Date_review'])
-    new_df["Response_time"] = new_df["Date_reply"] - new_df['Date_review']
-
+    min_date = min(new_df['Date_review'])
+    new_df["Response_time"] = new_df["Date_reply"] - min_date
     # Convert 'Response_time' to a timedelta format
     new_df["Response_time"] = new_df["Response_time"].dt.days
 
@@ -177,7 +197,11 @@ def create_response_time(new_df):
     new_df = new_df.dropna(subset=["Language", "Date_experience"])
 
     return new_df
-def load_existing_dataframe(file_path):
+
+def are_dataframes_equal(df1, df2):
+    # Vérifie si les deux DataFrames sont égaux
+    return df1.equals(df2)
+def load_existing_dataframe(file_path, new_df=None):
     headers = {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
@@ -185,16 +209,32 @@ def load_existing_dataframe(file_path):
     }
 
     if os.path.isfile(file_path):
-        df = pd.read_csv(file_path)
-        print(f"Loaded DataFrame from {file_path}")
-        return df
+        try:
+            df = pd.read_csv(file_path)
+            print(f"Loaded DataFrame from {file_path}")
+
+            # Vérifie si les nouvelles données sont identiques aux anciennes
+            if new_df is not None and not are_dataframes_equal(df, new_df):
+                # Met à jour les anciennes données avec les nouvelles
+                df = pd.concat([df, new_df], ignore_index=True)
+                print("Concatenated new data with existing DataFrame.")
+                # Enregistre les données mises à jour dans le fichier
+                df.to_csv(file_path, index=False)
+            return df
+        except pd.errors.EmptyDataError:
+            # Le fichier est vide, renvoie un DataFrame vide
+            return pd.DataFrame()
     else:
         print(f"No existing DataFrame found at {file_path}")
         return pd.DataFrame()
+    
 
 def main_dataframe(new_df, df_anytime, df_bourso, df_orange, df_floa, df_cofidis, df_younited):
     # Convertir le DataFrame en une liste de dictionnaires
     review_data = df_cleaned.to_dict(orient='records')
+
+    for (company, (url, file_path)) in company_urls.items():
+        locals()[f"df_{company}"] = load_existing_dataframe(file_path, new_df)
 
     new_df.to_json("../data/processed/reviews.json", orient='records')
     new_df.to_csv("../data/processed/reviews.csv", index=False)
@@ -240,9 +280,18 @@ df_floa = pd.read_csv(floa_file_path) if os.path.isfile(floa_file_path) else pd.
 df_cofidis = pd.read_csv(cofidis_file_path) if os.path.isfile(cofidis_file_path) else pd.DataFrame()
 df_younited = pd.read_csv(younited_file_path) if os.path.isfile(younited_file_path) else pd.DataFrame()
 
+# Vérifie l'existence des fichiers avant de les lire
+df_anytime = load_existing_dataframe(anytime_file_path, df_anytime)
+df_bourso = load_existing_dataframe(bourso_file_path, df_bourso)
+df_orange = load_existing_dataframe(orange_file_path, df_orange)
+df_floa = load_existing_dataframe(floa_file_path, df_floa)
+df_cofidis = load_existing_dataframe(cofidis_file_path, df_cofidis)
+df_younited = load_existing_dataframe(younited_file_path, df_younited)
+
 # Exécution du code
 df_all = concat_extracted_companies(company_urls)
 df_splited = split_projection(df_all)
+df_splited["Date_review"] = df_splited["Date_review"].apply(convert_date)
 df_converted = conversion_type(df_splited)
 df_cleaned = cleaning_df(df_converted)
 new_df = create_response_time(df_cleaned)

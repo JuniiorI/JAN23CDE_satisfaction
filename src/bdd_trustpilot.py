@@ -481,3 +481,9 @@ def create_elasticsearch_index():
 
 if __name__ == "__main__":
     create_elasticsearch_index()
+
+"""Verified: Vérifié,
+    Invited: Invité,
+    Merged: Fusionné,
+    Redirected: Redirigé
+"""
