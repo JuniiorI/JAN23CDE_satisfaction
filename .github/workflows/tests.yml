@@ -21,11 +21,10 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install requests beautifulsoup4 pandas dateparser elasticsearch
 
     - name: Run scraping_trustpilot.py
       run: python src/scraping_trustpilot.py
 
     - name: Run bdd_trustpilot.py
       run: python src/bdd_trustpilot.py
-
