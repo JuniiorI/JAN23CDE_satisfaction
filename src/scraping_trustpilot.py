@@ -81,7 +81,8 @@ def load_existing_dataframe(file_path):
         return pd.DataFrame()
 
 def save_dataframe(df, file_path):
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    directory = os.path.dirname(file_path)
+    os.makedirs(directory, exist_ok=True)
     df.to_csv(file_path, index=False)
 
 def concat_extracted_companies(company_urls, previous_dfs=None):

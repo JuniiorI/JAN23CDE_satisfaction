@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - YACI01-yaya 
-      
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -19,7 +19,7 @@ jobs:
         python-version: 3.12
 
     - name: Create Directories
-      run: mkdir -p src/data/raw
+      run: mkdir -p ../data/raw
 
     - name: Install dependencies
       run: |
@@ -28,3 +28,6 @@ jobs:
 
     - name: Run scraping_trustpilot.py
       run: python src/scraping_trustpilot.py
+
+    - name: Run bdd_trustpilot.py
+      run: python src/bdd_trustpilot.py
