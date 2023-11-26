@@ -1,10 +1,10 @@
-# Planifier un cronjob chaque jour à 10h
+# Planifier un cronjob chaque jour à 8h
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: scraping-job
 spec:
-  schedule: "0 10 * * *"
+  schedule: "0 8 * * *"
   jobTemplate:
     spec:
       template:
